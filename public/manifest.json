@@ -1,0 +1,28 @@
+{
+  "name": "PORT24 Technologies - IT Consulting & Software Development",
+  "short_name": "PORT24",
+  "description": "Premier IT consulting and software development services in London, ON, Canada. 24+ years experience, 70+ satisfied clients.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon/P24-transparent bg.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon/P24.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "technology", "productivity"],
+  "lang": "en-CA",
+  "dir": "ltr"
+}
+
