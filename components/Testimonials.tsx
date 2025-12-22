@@ -106,7 +106,7 @@ const Testimonials = () => {
             What Our <span className="text-primary-600">Clients Say</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Don't just take our word for it. Here's what businesses like yours have to say about working with PORT24 Technologies.
+            Don&apos;t just take our word for it. Here&apos;s what businesses like yours have to say about working with PORT24 Technologies.
           </p>
         </motion.div>
 
