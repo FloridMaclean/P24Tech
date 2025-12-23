@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
 import { Send, Mail, Phone, MapPin, CheckCircle, AlertCircle } from 'lucide-react'
@@ -21,26 +21,52 @@ const ContactForm = () => {
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<FormData>()
+  } = useForm<FormData>({
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+  })
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = useCallback(async (data: FormData) => {
     setIsSubmitting(true)
     setSubmitStatus('idle')
 
     const timestamp = new Date().toISOString()
     console.log('📧 ===== CONTACT FORM SUBMISSION STARTED =====')
     console.log('⏰ Timestamp:', timestamp)
+    
+    // Safely log form data with null checks
+    const safeData = {
+      name: data?.name || '',
+      email: data?.email || '',
+      phone: data?.phone || 'Not provided',
+      message: data?.message || ''
+    }
+    
     console.log('📝 Form Data:', {
-      name: data.name,
-      email: data.email,
-      phone: data.phone || 'Not provided',
-      messageLength: data.message.length,
-      messagePreview: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : '')
+      name: safeData.name,
+      email: safeData.email,
+      phone: safeData.phone,
+      messageLength: safeData.message.length,
+      messagePreview: safeData.message.substring(0, 50) + (safeData.message.length > 50 ? '...' : '')
     })
 
     try {
       const requestUrl = '/api/contact'
-      const requestBody = JSON.stringify(data)
+      
+      // Ensure all required fields are present and valid
+      const formData = {
+        name: data?.name?.trim() || '',
+        email: data?.email?.trim() || '',
+        phone: data?.phone?.trim() || '',
+        message: data?.message?.trim() || ''
+      }
+      
+      // Validate required fields on client side
+      if (!formData.name || !formData.email || !formData.message) {
+        throw new Error('Please fill in all required fields (Name, Email, and Message)')
+      }
+      
+      const requestBody = JSON.stringify(formData)
       
       console.log('🌐 Preparing API Request:', {
         url: requestUrl,
@@ -80,10 +106,21 @@ const ContactForm = () => {
       })
 
       let responseData
-      const responseText = await response.text()
-      console.log('📄 Raw Response Text:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''))
+      let responseText = ''
       
       try {
+        responseText = await response.text()
+        console.log('📄 Raw Response Text Length:', responseText.length)
+        console.log('📄 Raw Response Text Preview:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''))
+      } catch (textError) {
+        console.error('❌ Failed to read response text:', textError)
+        throw new Error('Failed to read server response. Please try again.')
+      }
+      
+      try {
+        if (!responseText || responseText.trim().length === 0) {
+          throw new Error('Empty response from server')
+        }
         responseData = JSON.parse(responseText)
         console.log('✅ Parsed Response Data:', responseData)
       } catch (parseError) {
@@ -156,15 +193,34 @@ const ContactForm = () => {
         })
       }
 
-      setSubmitStatus('error')
-      setTimeout(() => {
-        setSubmitStatus('idle')
-      }, 5000)
+      // Safely set error status
+      try {
+        setSubmitStatus('error')
+      } catch (stateError) {
+        console.error('Failed to set error status:', stateError)
+      }
+      
+      // Safely set timeout
+      try {
+        setTimeout(() => {
+          try {
+            setSubmitStatus('idle')
+          } catch (e) {
+            console.error('Failed to reset status:', e)
+          }
+        }, 5000)
+      } catch (timeoutError) {
+        console.error('Failed to set timeout:', timeoutError)
+      }
     } finally {
-      setIsSubmitting(false)
-      console.log('🏁 ===== FORM SUBMISSION PROCESS COMPLETED =====')
+      try {
+        setIsSubmitting(false)
+        console.log('🏁 ===== FORM SUBMISSION PROCESS COMPLETED =====')
+      } catch (finallyError) {
+        console.error('Error in finally block:', finallyError)
+      }
     }
-  }
+  }, [reset])
 
   return (
     <section
