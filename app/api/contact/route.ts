@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!name || !email || !message) {
+      console.error('Missing required fields:', { name: !!name, email: !!email, message: !!message })
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
+      console.error('Invalid email format:', email)
       return NextResponse.json(
         { error: 'Invalid email format' },
         { status: 400 }
@@ -24,10 +26,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if SendGrid API key is configured
-    if (!process.env.SENDGRID_API_KEY) {
+    const sendGridApiKey = process.env.SENDGRID_API_KEY?.trim()
+    if (!sendGridApiKey || sendGridApiKey.length === 0) {
       console.error('SENDGRID_API_KEY is not configured')
       return NextResponse.json(
         { error: 'Email service is not configured. Please contact support.' },
+        { status: 500 }
+      )
+    }
+
+    // Validate SendGrid API key format (should start with SG.)
+    if (!sendGridApiKey.startsWith('SG.')) {
+      console.error('SENDGRID_API_KEY appears to be invalid (should start with SG.)')
+      return NextResponse.json(
+        { error: 'Email service configuration error. Please contact support.' },
         { status: 500 }
       )
     }
@@ -45,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize SendGrid with API key
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+    sgMail.setApiKey(sendGridApiKey)
 
     const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'sales@port24.tech'
     const toEmail = process.env.CONTACT_EMAIL || 'sales@port24.tech'
@@ -104,11 +116,48 @@ This email was sent from the contact form on www.port24.tech
       console.log('Email sent successfully via SendGrid')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('SendGrid error details:', JSON.stringify(error, null, 2))
+      const errorStack = error instanceof Error ? error.stack : undefined
+      
+      console.error('SendGrid error details:', {
+        message: errorMessage,
+        stack: errorStack,
+        error: error
+      })
+      
       if (error && typeof error === 'object' && 'response' in error) {
-        const sendGridError = error as { response?: { body?: unknown } }
-        console.error('SendGrid response body:', sendGridError.response?.body)
+        const sendGridError = error as { 
+          response?: { 
+            body?: unknown
+            statusCode?: number
+            headers?: unknown
+          } 
+        }
+        console.error('SendGrid response:', {
+          statusCode: sendGridError.response?.statusCode,
+          body: sendGridError.response?.body,
+          headers: sendGridError.response?.headers
+        })
       }
+      
+      // Check for specific SendGrid errors
+      if (error && typeof error === 'object' && 'response' in error) {
+        const sendGridError = error as { response?: { statusCode?: number } }
+        if (sendGridError.response?.statusCode === 401) {
+          console.error('SendGrid authentication failed - check API key')
+          return NextResponse.json(
+            { error: 'Email service authentication failed. Please contact support.' },
+            { status: 500 }
+          )
+        }
+        if (sendGridError.response?.statusCode === 403) {
+          console.error('SendGrid authorization failed - check API key permissions')
+          return NextResponse.json(
+            { error: 'Email service authorization failed. Please contact support.' },
+            { status: 500 }
+          )
+        }
+      }
+      
       return NextResponse.json(
         { 
           error: 'Failed to send message. Please try again later.',
@@ -123,7 +172,24 @@ This email was sent from the contact form on www.port24.tech
       { status: 200 }
     )
   } catch (error) {
-    console.error('Error processing contact form:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    console.error('Error processing contact form:', {
+      message: errorMessage,
+      stack: errorStack,
+      error: error,
+      timestamp: new Date().toISOString()
+    })
+    
+    // Handle JSON parsing errors
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: 'Invalid request format' },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Failed to send message. Please try again later.' },
       { status: 500 }
