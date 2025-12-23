@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
-import Script from 'next/script'
 import './globals.css'
 import { siteConfig } from '@/lib/seo'
 
@@ -120,19 +119,25 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon/P24.svg" />
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
-        {/* Google tag (gtag.js) */}
-        <Script
+        {/* Google tag (gtag.js) - Direct script tags required for Google Ads verification */}
+        {/* eslint-disable-next-line @next/next/next-script-for-ga */}
+        <script
+          async
           src="https://www.googletagmanager.com/gtag/js?id=G-GKX8ET4SWN"
-          strategy="afterInteractive"
+          suppressHydrationWarning
         />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-GKX8ET4SWN');
-          `}
-        </Script>
+        {/* eslint-disable-next-line @next/next/next-script-for-ga */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-GKX8ET4SWN');
+            `,
+          }}
+          suppressHydrationWarning
+        />
       </head>
       <body className={inter.className}>{children}</body>
     </html>
