@@ -8,18 +8,41 @@ interface StructuredDataProps {
 }
 
 export default function StructuredData({ data }: StructuredDataProps) {
-  const jsonLd = Array.isArray(data) ? data : [data]
+  try {
+    if (!data) {
+      console.warn('StructuredData: No data provided')
+      return null
+    }
 
-  return (
-    <>
-      {jsonLd.map((item, index) => (
-        <script
-          key={index}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }}
-        />
-      ))}
-    </>
-  )
+    const jsonLd = Array.isArray(data) ? data : [data]
+
+    return (
+      <>
+        {jsonLd.map((item, index) => {
+          try {
+            if (!item || typeof item !== 'object') {
+              console.warn(`StructuredData: Invalid item at index ${index}`)
+              return null
+            }
+
+            const jsonString = JSON.stringify(item)
+            return (
+              <script
+                key={index}
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonString }}
+              />
+            )
+          } catch (error) {
+            console.error(`StructuredData: Error serializing item at index ${index}:`, error)
+            return null
+          }
+        })}
+      </>
+    )
+  } catch (error) {
+    console.error('StructuredData: Error rendering structured data:', error)
+    return null
+  }
 }
 
