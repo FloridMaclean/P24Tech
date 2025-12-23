@@ -65,9 +65,7 @@ export default function ContactScrollHandler() {
       if (timeoutId) {
         clearTimeout(timeoutId)
       }
-      if (checkOnMount) {
-        clearTimeout(checkOnMount)
-      }
+      clearTimeout(checkOnMount)
     }
   }, [isHomePage])
 

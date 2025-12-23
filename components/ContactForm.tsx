@@ -27,73 +27,89 @@ const ContactForm = () => {
     setIsSubmitting(true)
     setSubmitStatus('idle')
 
-    // Log form submission start
-    console.log('📧 Contact Form Submission Started:', {
-      timestamp: new Date().toISOString(),
-      formData: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone || 'Not provided',
-        messageLength: data.message.length,
-      },
+    const timestamp = new Date().toISOString()
+    console.log('📧 ===== CONTACT FORM SUBMISSION STARTED =====')
+    console.log('⏰ Timestamp:', timestamp)
+    console.log('📝 Form Data:', {
+      name: data.name,
+      email: data.email,
+      phone: data.phone || 'Not provided',
+      messageLength: data.message.length,
+      messagePreview: data.message.substring(0, 50) + (data.message.length > 50 ? '...' : '')
     })
 
     try {
+      const requestUrl = '/api/contact'
       const requestBody = JSON.stringify(data)
-      console.log('📤 Sending request to /api/contact:', {
+      
+      console.log('🌐 Preparing API Request:', {
+        url: requestUrl,
         method: 'POST',
-        url: '/api/contact',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         bodySize: requestBody.length,
+        bodyPreview: requestBody.substring(0, 200) + (requestBody.length > 200 ? '...' : '')
       })
 
-      const response = await fetch('/api/contact', {
+      const startTime = performance.now()
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: requestBody,
       })
+      const endTime = performance.now()
+      const requestDuration = endTime - startTime
 
-      // Log response details
-      const responseStatus = response.status
-      const responseStatusText = response.statusText
-      console.log('📥 Response received:', {
-        status: responseStatus,
-        statusText: responseStatusText,
+      console.log('📥 Response Received:', {
+        status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
+        duration: `${requestDuration.toFixed(2)}ms`,
         headers: Object.fromEntries(response.headers.entries()),
+        timestamp: new Date().toISOString()
       })
 
-      // Parse response body
       let responseData
       try {
-        responseData = await response.json()
-        console.log('📋 Response body:', responseData)
+        const responseText = await response.text()
+        console.log('📄 Raw Response Text:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''))
+        
+        responseData = JSON.parse(responseText)
+        console.log('✅ Parsed Response Data:', responseData)
       } catch (parseError) {
-        console.error('❌ Failed to parse response as JSON:', parseError)
+        console.error('❌ ===== RESPONSE PARSING ERROR =====')
+        console.error('Failed to parse response as JSON:', parseError)
         const textResponse = await response.text()
-        console.error('📄 Raw response text:', textResponse)
-        throw new Error('Invalid response format from server')
+        console.error('Raw response text:', textResponse)
+        console.error('Response status:', response.status)
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()))
+        console.error('Error details:', {
+          name: parseError instanceof Error ? parseError.name : 'Unknown',
+          message: parseError instanceof Error ? parseError.message : String(parseError),
+          stack: parseError instanceof Error ? parseError.stack : undefined
+        })
+        throw new Error('Invalid response from server. Please try again.')
       }
 
       if (!response.ok) {
-        console.error('❌ API Error Response:', {
-          status: responseStatus,
-          statusText: responseStatusText,
-          error: responseData.error,
-          details: responseData.details,
-          fullResponse: responseData,
-        })
+        console.error('❌ ===== API ERROR RESPONSE =====')
+        console.error('Status Code:', response.status)
+        console.error('Status Text:', response.statusText)
+        console.error('Error Message:', responseData.error)
+        console.error('Error Details:', JSON.stringify(responseData.details, null, 2))
+        console.error('Full Response:', JSON.stringify(responseData, null, 2))
+        console.error('Request Duration:', `${requestDuration.toFixed(2)}ms`)
+        
         throw new Error(responseData.error || 'Failed to send message')
       }
 
-      console.log('✅ Contact form submitted successfully:', {
-        message: responseData.message,
-        timestamp: new Date().toISOString(),
-      })
+      console.log('✅ ===== FORM SUBMISSION SUCCESSFUL =====')
+      console.log('Success Message:', responseData.message)
+      console.log('Request Duration:', `${requestDuration.toFixed(2)}ms`)
+      console.log('Timestamp:', new Date().toISOString())
 
       setSubmitStatus('success')
       reset()
@@ -103,23 +119,35 @@ const ContactForm = () => {
         setSubmitStatus('idle')
       }, 5000)
     } catch (error) {
-      const errorDetails = {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString(),
+      console.error('❌ ===== CONTACT FORM ERROR =====')
+      console.error('Error Type:', error instanceof Error ? error.constructor.name : typeof error)
+      console.error('Error Message:', error instanceof Error ? error.message : String(error))
+      console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack trace available')
+      console.error('Full Error Object:', error)
+      console.error('Timestamp:', new Date().toISOString())
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('🔍 Network Error Detected:', {
+          hint: 'This might indicate a network connectivity issue or CORS problem',
+          url: '/api/contact',
+          error: error.message
+        })
       }
       
-      console.error('❌ Error submitting contact form:', errorDetails)
-      console.error('🔍 Full error object:', error)
-      
+      if (error instanceof Error && error.message.includes('JSON')) {
+        console.error('🔍 JSON Parsing Error Detected:', {
+          hint: 'The server response might not be valid JSON',
+          error: error.message
+        })
+      }
+
       setSubmitStatus('error')
       setTimeout(() => {
         setSubmitStatus('idle')
       }, 5000)
     } finally {
       setIsSubmitting(false)
-      console.log('🏁 Contact form submission process completed')
+      console.log('🏁 ===== FORM SUBMISSION PROCESS COMPLETED =====')
     }
   }
 
