@@ -27,6 +27,10 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: process.env.PORT || 3000,
         HOSTNAME: process.env.HOSTNAME || '0.0.0.0',
+        // SendGrid configuration
+        SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+        SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || 'sales@port24.tech',
+        CONTACT_EMAIL: process.env.CONTACT_EMAIL || 'sales@port24.tech',
       },
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',
