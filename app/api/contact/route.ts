@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sgMail from '@sendgrid/mail'
 
+// Configure runtime for Node.js (default, but explicit for clarity)
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
   const timestamp = new Date().toISOString()
@@ -15,26 +18,74 @@ export async function POST(request: NextRequest) {
     // Parse request body with error handling
     let body
     try {
+      // Check content type
+      const contentType = request.headers.get('content-type') || ''
+      console.log('📋 Content-Type:', contentType)
+      
+      // Use request.json() directly - this is the recommended approach in Next.js App Router
       body = await request.json()
+      
       console.log('✅ Parsed Request Body:', {
-        name: body.name,
-        email: body.email,
-        phone: body.phone || 'Not provided',
-        messageLength: body.message?.length || 0
+        name: body?.name,
+        email: body?.email,
+        phone: body?.phone || 'Not provided',
+        messageLength: body?.message?.length || 0,
+        hasName: !!body?.name,
+        hasEmail: !!body?.email,
+        hasMessage: !!body?.message
       })
+      
+      // Validate body exists
+      if (!body || typeof body !== 'object') {
+        console.error('❌ Request body is not a valid object')
+        return NextResponse.json(
+          { 
+            error: 'Invalid request format',
+            details: {
+              issue: 'Request body is not a valid JSON object',
+              contentType,
+              bodyType: typeof body,
+              requestId
+            },
+            requestId
+          },
+          { status: 400 }
+        )
+      }
     } catch (parseError) {
       console.error('❌ ===== REQUEST BODY PARSING ERROR =====')
       console.error('Failed to parse request body:', parseError)
       console.error('Error Type:', parseError instanceof Error ? parseError.constructor.name : typeof parseError)
-      console.error('Error Details:', parseError instanceof Error ? parseError.stack : String(parseError))
+      console.error('Error Message:', parseError instanceof Error ? parseError.message : String(parseError))
+      console.error('Error Stack:', parseError instanceof Error ? parseError.stack : 'No stack available')
+      console.error('Content-Type Header:', request.headers.get('content-type'))
+      
+      // Check if it's a specific JSON parsing error
+      if (parseError instanceof SyntaxError) {
+        return NextResponse.json(
+          { 
+            error: 'Invalid JSON format',
+            details: {
+              issue: 'Request body is not valid JSON',
+              errorType: 'SyntaxError',
+              errorMessage: parseError.message,
+              hint: 'Please ensure the request body is valid JSON',
+              requestId
+            },
+            requestId
+          },
+          { status: 400 }
+        )
+      }
       
       return NextResponse.json(
         { 
           error: 'Invalid request format',
           details: {
-            issue: 'Could not parse JSON from request body',
+            issue: 'Could not parse request body',
             errorType: parseError instanceof Error ? parseError.constructor.name : typeof parseError,
-            errorMessage: parseError instanceof Error ? parseError.message : String(parseError)
+            errorMessage: parseError instanceof Error ? parseError.message : String(parseError),
+            requestId
           },
           requestId
         },
