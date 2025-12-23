@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body with error handling
     // Use request.text() then JSON.parse() for better compatibility
-    let body: any = null
+    let body: { name?: string; email?: string; phone?: string; message?: string } | null = null
     
     try {
       // Check content type
@@ -181,19 +181,26 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    
+    // After validation, we know name, email, and message are valid strings
+    // Extract and trim them to ensure they're strings
+    const nameStr = (typeof name === 'string' ? name.trim() : '')
+    const emailStr = (typeof email === 'string' ? email.trim() : '')
+    const messageStr = (typeof message === 'string' ? message.trim() : '')
+    const phoneStr = (typeof phone === 'string' ? phone.trim() : '')
 
     // Validate email format with safe checks
     console.log('🔍 Validating email format...')
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const isEmailValid = typeof email === 'string' && emailRegex.test(email.trim())
-    console.log('✅ Email Validation:', { email, emailType: typeof email, isValid: isEmailValid })
+    const isEmailValid = typeof email === 'string' && emailRegex.test(emailStr)
+    console.log('✅ Email Validation:', { email: emailStr, emailType: typeof emailStr, isValid: isEmailValid })
 
     if (!isEmailValid) {
       console.error('❌ Validation Failed: Invalid email format')
       return NextResponse.json(
         { 
           error: 'Invalid email format',
-          details: { email, isValid: false },
+          details: { email: emailStr, isValid: false },
           requestId
         },
         { status: 400 }
@@ -203,7 +210,6 @@ export async function POST(request: NextRequest) {
     // Check if SendGrid API key is configured
     console.log('🔍 Checking SendGrid API key configuration...')
     const sendGridApiKey = process.env.SENDGRID_API_KEY?.trim()
-    const isDevelopment = process.env.NODE_ENV === 'development'
     
     const envCheck = {
       hasKey: !!process.env.SENDGRID_API_KEY,
@@ -320,7 +326,7 @@ export async function POST(request: NextRequest) {
     console.log('📧 Email Configuration:', {
       from: fromEmail,
       to: toEmail,
-      replyTo: email
+      replyTo: emailStr
     })
 
     // Send email using SendGrid
@@ -328,22 +334,22 @@ export async function POST(request: NextRequest) {
     const msg = {
       to: toEmail,
       from: fromEmail,
-      replyTo: email,
-      subject: `New Contact Form Submission from ${name}`,
+      replyTo: emailStr,
+      subject: `New Contact Form Submission from ${nameStr}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
             New Contact Form Submission
           </h2>
           <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin-top: 20px;">
-            <p style="margin: 10px 0;"><strong style="color: #374151;">Name:</strong> <span style="color: #111827;">${escapeHtml(name)}</span></p>
-            <p style="margin: 10px 0;"><strong style="color: #374151;">Email:</strong> <a href="mailto:${escapeHtml(email)}" style="color: #2563eb; text-decoration: none;">${escapeHtml(email)}</a></p>
-            <p style="margin: 10px 0;"><strong style="color: #374151;">Phone:</strong> <span style="color: #111827;">${phone ? escapeHtml(phone) : 'Not provided'}</span></p>
+            <p style="margin: 10px 0;"><strong style="color: #374151;">Name:</strong> <span style="color: #111827;">${escapeHtml(nameStr)}</span></p>
+            <p style="margin: 10px 0;"><strong style="color: #374151;">Email:</strong> <a href="mailto:${escapeHtml(emailStr)}" style="color: #2563eb; text-decoration: none;">${escapeHtml(emailStr)}</a></p>
+            <p style="margin: 10px 0;"><strong style="color: #374151;">Phone:</strong> <span style="color: #111827;">${phoneStr ? escapeHtml(phoneStr) : 'Not provided'}</span></p>
           </div>
           <div style="margin-top: 20px;">
             <h3 style="color: #374151; margin-bottom: 10px;">Message:</h3>
             <div style="background-color: #ffffff; padding: 15px; border-left: 4px solid #2563eb; border-radius: 4px;">
-              <p style="color: #111827; white-space: pre-wrap; line-height: 1.6;">${escapeHtml(message).replace(/\n/g, '<br>')}</p>
+              <p style="color: #111827; white-space: pre-wrap; line-height: 1.6;">${escapeHtml(messageStr).replace(/\n/g, '<br>')}</p>
             </div>
           </div>
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
@@ -354,12 +360,12 @@ export async function POST(request: NextRequest) {
       text: `
 New Contact Form Submission
 
-Name: ${name}
-Email: ${email}
-Phone: ${phone || 'Not provided'}
+Name: ${nameStr}
+Email: ${emailStr}
+Phone: ${phoneStr || 'Not provided'}
 
 Message:
-${message}
+${messageStr}
 
 ---
 This email was sent from the contact form on www.port24.tech
@@ -501,7 +507,6 @@ This email was sent from the contact form on www.port24.tech
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorStack = error instanceof Error ? error.stack : undefined
-    const isDevelopment = process.env.NODE_ENV === 'development'
     
     console.error(`\n❌ ===== UNEXPECTED ERROR PROCESSING CONTACT FORM [${requestId}] =====`)
     console.error('Error Type:', error instanceof Error ? error.constructor.name : typeof error)

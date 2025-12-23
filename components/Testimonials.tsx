@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -63,7 +63,21 @@ const Testimonials = () => {
   ]
 
   const [currentIndex, setCurrentIndex] = useState(0)
-  const itemsPerView = 3
+  const [itemsPerView, setItemsPerView] = useState(1)
+
+  useEffect(() => {
+    const updateItemsPerView = () => {
+      if (window.innerWidth >= 768) {
+        setItemsPerView(2) // Tablet: 2 items
+      } else {
+        setItemsPerView(1) // Mobile: 1 item
+      }
+    }
+
+    updateItemsPerView()
+    window.addEventListener('resize', updateItemsPerView)
+    return () => window.removeEventListener('resize', updateItemsPerView)
+  }, [])
 
   const nextTestimonial = () => {
     setCurrentIndex((prev) => (prev + itemsPerView >= testimonials.length ? 0 : prev + itemsPerView))
@@ -180,7 +194,7 @@ const Testimonials = () => {
           </motion.div>
         </div>
 
-        {/* Mobile/Tablet Carousel View */}
+          {/* Mobile/Tablet Carousel View */}
         <div className="lg:hidden relative">
           <div className="relative overflow-hidden rounded-2xl">
             <AnimatePresence mode="wait">
@@ -190,7 +204,7 @@ const Testimonials = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.3 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                className={`grid gap-6 ${itemsPerView === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
                 itemScope
                 itemType="https://schema.org/Review"
               >
@@ -265,10 +279,10 @@ const Testimonials = () => {
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index * itemsPerView)}
-                className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                className={`min-w-[12px] min-h-[12px] rounded-full transition-all duration-200 ${
                   Math.floor(currentIndex / itemsPerView) === index
-                    ? 'bg-primary-600 w-8'
-                    : 'bg-gray-300 hover:bg-gray-400'
+                    ? 'bg-primary-600 w-8 h-3'
+                    : 'bg-gray-300 hover:bg-gray-400 w-3 h-3'
                 }`}
                 aria-label={`Go to testimonial set ${index + 1}`}
               />

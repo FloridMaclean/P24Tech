@@ -130,7 +130,7 @@ const ContactForm = () => {
         console.error('Response status:', response.status)
         try {
           console.error('Response headers:', Object.fromEntries(response.headers.entries()))
-        } catch (e) {
+        } catch {
           console.error('Could not read response headers')
         }
         console.error('Error details:', {
