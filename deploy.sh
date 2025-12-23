@@ -27,7 +27,7 @@ echo "📦 Installing dependencies..."
 npm install --production
 
 echo "🔨 Building application..."
-npm run build
+NODE_ENV=production npm run build
 
 echo "✅ Verifying build output..."
 
@@ -52,6 +52,24 @@ if [ "$CHUNK_COUNT" -eq 0 ]; then
     echo "❌ Error: No chunk files found! Build may have failed."
     exit 1
 fi
+
+# Check for standalone build output (if using standalone mode)
+if [ -d ".next/standalone" ]; then
+    echo "✅ Standalone build detected"
+    echo "📦 Standalone build includes:"
+    ls -la .next/standalone/ | head -10
+fi
+
+# Verify critical static files
+echo "🔍 Verifying critical static files..."
+if [ ! -d ".next/static" ]; then
+    echo "❌ Error: .next/static folder not found!"
+    exit 1
+fi
+
+# List some chunk files to verify they exist
+echo "📋 Sample chunk files:"
+find .next/static/chunks -name "*.js" | head -5
 
 echo "🔐 Setting permissions..."
 chmod -R 755 .next

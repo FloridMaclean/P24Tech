@@ -15,9 +15,7 @@ export async function POST(request: NextRequest) {
     // Parse request body with error handling
     let body
     try {
-      const rawBody = await request.text()
-      console.log('📝 Raw Request Body:', rawBody.substring(0, 200) + (rawBody.length > 200 ? '...' : ''))
-      body = JSON.parse(rawBody)
+      body = await request.json()
       console.log('✅ Parsed Request Body:', {
         name: body.name,
         email: body.email,

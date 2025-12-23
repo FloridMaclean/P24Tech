@@ -10,12 +10,24 @@
   # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
   
   # CRITICAL: Allow Next.js static files to be served directly
-  # This prevents 400 errors on chunk loading
-  RewriteCond %{REQUEST_URI} ^/_next/static/ [OR]
+  # This prevents 404 errors on chunk loading
+  # Check if the file exists first, then allow it
+  RewriteCond %{REQUEST_URI} ^/_next/static/
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+  
+  # Allow _next/image and other static assets
   RewriteCond %{REQUEST_URI} ^/_next/image [OR]
   RewriteCond %{REQUEST_URI} ^/favicon.ico [OR]
   RewriteCond %{REQUEST_URI} ^/robots.txt [OR]
-  RewriteCond %{REQUEST_URI} ^/sitemap.xml
+  RewriteCond %{REQUEST_URI} ^/sitemap.xml [OR]
+  RewriteCond %{REQUEST_URI} ^/manifest.json [OR]
+  RewriteCond %{REQUEST_URI} ^/icon/
+  RewriteRule ^ - [L]
+  
+  # If _next/static file doesn't exist, proxy to Node.js server
+  # This handles cases where files are served by Next.js server
+  RewriteCond %{REQUEST_URI} ^/_next/
   RewriteRule ^ - [L]
   
   # Proxy requests to Node.js server (if using reverse proxy)
@@ -35,6 +47,16 @@
   
   # XSS Protection
   Header always set X-XSS-Protection "1; mode=block"
+  
+  # Ensure JavaScript files are served with correct MIME type
+  <FilesMatch "\.(js|mjs)$">
+    Header set Content-Type "application/javascript; charset=utf-8"
+  </FilesMatch>
+  
+  # Cache static chunks with proper headers
+  <FilesMatch "^/_next/static/">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>
 
 # Compression
