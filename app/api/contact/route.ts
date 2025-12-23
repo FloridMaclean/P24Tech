@@ -8,22 +8,79 @@ export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
   const timestamp = new Date().toISOString()
   
-  console.log(`\n📧 ===== CONTACT FORM API REQUEST [${requestId}] =====`)
-  console.log('⏰ Timestamp:', timestamp)
-  console.log('🌐 Request URL:', request.url)
-  console.log('📋 Request Method:', request.method)
-  console.log('🔗 Request Headers:', Object.fromEntries(request.headers.entries()))
+  // Validate request object
+  if (!request) {
+    console.error('❌ Request object is null or undefined')
+    return NextResponse.json(
+      { 
+        error: 'Invalid request',
+        details: { issue: 'Request object is missing', requestId },
+        requestId
+      },
+      { status: 400 }
+    )
+  }
+  
+  try {
+    console.log(`\n📧 ===== CONTACT FORM API REQUEST [${requestId}] =====`)
+    console.log('⏰ Timestamp:', timestamp)
+    console.log('🌐 Request URL:', request?.url || 'N/A')
+    console.log('📋 Request Method:', request?.method || 'N/A')
+    
+    // Safely get headers
+    let headersObj = {}
+    try {
+      if (request.headers) {
+        headersObj = Object.fromEntries(request.headers.entries())
+      }
+    } catch (headerError) {
+      console.warn('⚠️ Could not read request headers:', headerError)
+    }
+    console.log('🔗 Request Headers:', headersObj)
+  } catch (logError) {
+    console.error('⚠️ Error in initial logging:', logError)
+    // Continue anyway - this is just logging
+  }
 
   try {
     // Parse request body with error handling
-    let body
+    // Use request.text() then JSON.parse() for better compatibility
+    let body: any = null
+    
     try {
       // Check content type
       const contentType = request.headers.get('content-type') || ''
       console.log('📋 Content-Type:', contentType)
       
-      // Use request.json() directly - this is the recommended approach in Next.js App Router
-      body = await request.json()
+      // Read body as text first (more reliable across environments)
+      const rawBody = await request.text()
+      
+      if (!rawBody || rawBody.trim().length === 0) {
+        console.error('❌ Request body is empty')
+        return NextResponse.json(
+          { 
+            error: 'Request body is empty',
+            details: {
+              issue: 'No data received in request body',
+              contentType,
+              requestId
+            },
+            requestId
+          },
+          { status: 400 }
+        )
+      }
+      
+      console.log('📝 Raw Request Body Length:', rawBody.length)
+      console.log('📝 Raw Request Body Preview:', rawBody.substring(0, 200) + (rawBody.length > 200 ? '...' : ''))
+      
+      // Parse JSON
+      try {
+        body = JSON.parse(rawBody)
+      } catch (jsonParseError) {
+        console.error('❌ JSON.parse() failed:', jsonParseError)
+        throw jsonParseError
+      }
       
       console.log('✅ Parsed Request Body:', {
         name: body?.name,
@@ -35,8 +92,8 @@ export async function POST(request: NextRequest) {
         hasMessage: !!body?.message
       })
       
-      // Validate body exists
-      if (!body || typeof body !== 'object') {
+      // Validate body exists and is an object
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
         console.error('❌ Request body is not a valid object')
         return NextResponse.json(
           { 
@@ -45,6 +102,7 @@ export async function POST(request: NextRequest) {
               issue: 'Request body is not a valid JSON object',
               contentType,
               bodyType: typeof body,
+              isArray: Array.isArray(body),
               requestId
             },
             requestId
@@ -95,14 +153,22 @@ export async function POST(request: NextRequest) {
 
     const { name, email, phone, message } = body
 
-    // Validate required fields
+    // Validate required fields with safe null checks
     console.log('🔍 Validating required fields...')
     const fieldValidation = {
-      name: !!name && name.trim().length > 0,
-      email: !!email && email.trim().length > 0,
-      message: !!message && message.trim().length > 0
+      name: !!name && typeof name === 'string' && name.trim().length > 0,
+      email: !!email && typeof email === 'string' && email.trim().length > 0,
+      message: !!message && typeof message === 'string' && message.trim().length > 0
     }
     console.log('✅ Field Validation Results:', fieldValidation)
+    console.log('📊 Field Types:', {
+      nameType: typeof name,
+      emailType: typeof email,
+      messageType: typeof message,
+      nameValue: name,
+      emailValue: email,
+      messageValue: message ? message.substring(0, 50) + '...' : 'empty'
+    })
 
     if (!fieldValidation.name || !fieldValidation.email || !fieldValidation.message) {
       console.error('❌ Validation Failed: Missing required fields')
@@ -116,11 +182,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate email format
+    // Validate email format with safe checks
     console.log('🔍 Validating email format...')
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const isEmailValid = emailRegex.test(email)
-    console.log('✅ Email Validation:', { email, isValid: isEmailValid })
+    const isEmailValid = typeof email === 'string' && emailRegex.test(email.trim())
+    console.log('✅ Email Validation:', { email, emailType: typeof email, isValid: isEmailValid })
 
     if (!isEmailValid) {
       console.error('❌ Validation Failed: Invalid email format')
@@ -203,6 +269,24 @@ export async function POST(request: NextRequest) {
         "'": '&#039;',
       }
       return text.replace(/[&<>"']/g, (m) => map[m])
+    }
+
+    // Check if SendGrid module is available
+    if (!sgMail || typeof sgMail.setApiKey !== 'function') {
+      console.error('❌ ===== SENDGRID MODULE NOT AVAILABLE =====')
+      return NextResponse.json(
+        { 
+          error: 'Email service is not available. Please contact support.',
+          details: {
+            issue: 'SendGrid module is not properly loaded',
+            hasSgMail: !!sgMail,
+            hasSetApiKey: !!(sgMail && typeof sgMail.setApiKey === 'function'),
+            requestId
+          },
+          requestId
+        },
+        { status: 500 }
+      )
     }
 
     // Initialize SendGrid with API key
