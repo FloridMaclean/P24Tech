@@ -3,7 +3,12 @@ const nextConfig = {
   reactStrictMode: true,
   // Enable standalone output for better Hostinger deployment
   // This creates a minimal server with only necessary files
-  output: 'standalone',
+  // TEMPORARILY DISABLED: Uncomment to enable standalone mode
+  // NOTE: When using standalone, use .next/standalone/server.js as startup file
+  // output: 'standalone',
+  
+  // Ensure static files are properly served
+  distDir: '.next',
   // Optimize images
   images: {
     formats: ['image/avif', 'image/webp'],
