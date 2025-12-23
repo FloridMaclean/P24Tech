@@ -9,6 +9,15 @@
   # RewriteCond %{HTTPS} off
   # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
   
+  # CRITICAL: Allow Next.js static files to be served directly
+  # This prevents 400 errors on chunk loading
+  RewriteCond %{REQUEST_URI} ^/_next/static/ [OR]
+  RewriteCond %{REQUEST_URI} ^/_next/image [OR]
+  RewriteCond %{REQUEST_URI} ^/favicon.ico [OR]
+  RewriteCond %{REQUEST_URI} ^/robots.txt [OR]
+  RewriteCond %{REQUEST_URI} ^/sitemap.xml
+  RewriteRule ^ - [L]
+  
   # Proxy requests to Node.js server (if using reverse proxy)
   # Uncomment if Hostinger requires reverse proxy setup
   # RewriteCond %{REQUEST_FILENAME} !-f

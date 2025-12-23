@@ -25,7 +25,7 @@ const Navbar = () => {
     { name: 'About', href: isHomePage ? '#about' : '/#about' },
     { name: 'Services', href: isHomePage ? '#services' : '/#services' },
     { name: 'Testimonials', href: isHomePage ? '#testimonials' : '/#testimonials' },
-    { name: 'Contact', href: isHomePage ? '#contact' : '/contact' },
+    { name: 'Contact', href: '/contact' },
   ]
 
   const handleNavClick = (href: string, e?: React.MouseEvent) => {

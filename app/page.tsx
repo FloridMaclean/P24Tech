@@ -9,6 +9,7 @@ import ContactForm from '@/components/ContactForm'
 import FAQ from '@/components/FAQ'
 import Footer from '@/components/Footer'
 import StructuredData from '@/components/StructuredData'
+import ContactScrollHandler from '@/components/ContactScrollHandler'
 import {
   getOrganizationSchema,
   getLocalBusinessSchema,
@@ -81,6 +82,7 @@ export default function Home() {
   return (
     <>
       <StructuredData data={structuredData} />
+      <ContactScrollHandler />
       <main className="min-h-screen">
         <Navbar />
         <Hero />
