@@ -27,8 +27,22 @@ export async function POST(request: NextRequest) {
 
     // Check if SendGrid API key is configured
     const sendGridApiKey = process.env.SENDGRID_API_KEY?.trim()
+    
+    // Enhanced logging for debugging production issues
+    console.log('Environment check:', {
+      hasApiKey: !!sendGridApiKey,
+      apiKeyLength: sendGridApiKey?.length || 0,
+      apiKeyPrefix: sendGridApiKey?.substring(0, 3) || 'N/A',
+      nodeEnv: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
+    })
+    
     if (!sendGridApiKey || sendGridApiKey.length === 0) {
-      console.error('SENDGRID_API_KEY is not configured')
+      console.error('SENDGRID_API_KEY is not configured', {
+        envVarExists: 'SENDGRID_API_KEY' in process.env,
+        envVarValue: process.env.SENDGRID_API_KEY ? '[REDACTED]' : 'undefined',
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes('SENDGRID') || key.includes('EMAIL'))
+      })
       return NextResponse.json(
         { error: 'Email service is not configured. Please contact support.' },
         { status: 500 }
@@ -37,7 +51,10 @@ export async function POST(request: NextRequest) {
 
     // Validate SendGrid API key format (should start with SG.)
     if (!sendGridApiKey.startsWith('SG.')) {
-      console.error('SENDGRID_API_KEY appears to be invalid (should start with SG.)')
+      console.error('SENDGRID_API_KEY appears to be invalid (should start with SG.)', {
+        keyPrefix: sendGridApiKey.substring(0, 10) + '...',
+        keyLength: sendGridApiKey.length
+      })
       return NextResponse.json(
         { error: 'Email service configuration error. Please contact support.' },
         { status: 500 }
