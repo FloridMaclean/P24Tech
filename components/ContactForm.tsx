@@ -63,29 +63,39 @@ const ContactForm = () => {
       const endTime = performance.now()
       const requestDuration = endTime - startTime
 
+      let headersObj = {}
+      try {
+        headersObj = Object.fromEntries(response.headers.entries())
+      } catch (headersError) {
+        console.warn('Could not parse response headers:', headersError)
+      }
+      
       console.log('📥 Response Received:', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
         duration: `${requestDuration.toFixed(2)}ms`,
-        headers: Object.fromEntries(response.headers.entries()),
+        headers: headersObj,
         timestamp: new Date().toISOString()
       })
 
       let responseData
+      const responseText = await response.text()
+      console.log('📄 Raw Response Text:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''))
+      
       try {
-        const responseText = await response.text()
-        console.log('📄 Raw Response Text:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''))
-        
         responseData = JSON.parse(responseText)
         console.log('✅ Parsed Response Data:', responseData)
       } catch (parseError) {
         console.error('❌ ===== RESPONSE PARSING ERROR =====')
         console.error('Failed to parse response as JSON:', parseError)
-        const textResponse = await response.text()
-        console.error('Raw response text:', textResponse)
+        console.error('Raw response text:', responseText)
         console.error('Response status:', response.status)
-        console.error('Response headers:', Object.fromEntries(response.headers.entries()))
+        try {
+          console.error('Response headers:', Object.fromEntries(response.headers.entries()))
+        } catch (e) {
+          console.error('Could not read response headers')
+        }
         console.error('Error details:', {
           name: parseError instanceof Error ? parseError.name : 'Unknown',
           message: parseError instanceof Error ? parseError.message : String(parseError),
@@ -98,16 +108,21 @@ const ContactForm = () => {
         console.error('❌ ===== API ERROR RESPONSE =====')
         console.error('Status Code:', response.status)
         console.error('Status Text:', response.statusText)
-        console.error('Error Message:', responseData.error)
-        console.error('Error Details:', JSON.stringify(responseData.details, null, 2))
-        console.error('Full Response:', JSON.stringify(responseData, null, 2))
+        console.error('Error Message:', responseData?.error || 'Unknown error')
+        console.error('Error Details:', responseData?.details ? JSON.stringify(responseData.details, null, 2) : 'No details available')
+        console.error('Full Response:', JSON.stringify(responseData || {}, null, 2))
         console.error('Request Duration:', `${requestDuration.toFixed(2)}ms`)
         
-        throw new Error(responseData.error || 'Failed to send message')
+        throw new Error(responseData?.error || 'Failed to send message')
+      }
+      
+      if (!responseData) {
+        console.error('❌ No response data received')
+        throw new Error('No response from server. Please try again.')
       }
 
       console.log('✅ ===== FORM SUBMISSION SUCCESSFUL =====')
-      console.log('Success Message:', responseData.message)
+      console.log('Success Message:', responseData?.message || 'Message sent successfully')
       console.log('Request Duration:', `${requestDuration.toFixed(2)}ms`)
       console.log('Timestamp:', new Date().toISOString())
 
