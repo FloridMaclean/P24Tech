@@ -27,18 +27,73 @@ const ContactForm = () => {
     setIsSubmitting(true)
     setSubmitStatus('idle')
 
+    // Log form submission start
+    console.log('📧 Contact Form Submission Started:', {
+      timestamp: new Date().toISOString(),
+      formData: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone || 'Not provided',
+        messageLength: data.message.length,
+      },
+    })
+
     try {
+      const requestBody = JSON.stringify(data)
+      console.log('📤 Sending request to /api/contact:', {
+        method: 'POST',
+        url: '/api/contact',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        bodySize: requestBody.length,
+      })
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: requestBody,
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to send message')
+      // Log response details
+      const responseStatus = response.status
+      const responseStatusText = response.statusText
+      console.log('📥 Response received:', {
+        status: responseStatus,
+        statusText: responseStatusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries()),
+      })
+
+      // Parse response body
+      let responseData
+      try {
+        responseData = await response.json()
+        console.log('📋 Response body:', responseData)
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError)
+        const textResponse = await response.text()
+        console.error('📄 Raw response text:', textResponse)
+        throw new Error('Invalid response format from server')
       }
+
+      if (!response.ok) {
+        console.error('❌ API Error Response:', {
+          status: responseStatus,
+          statusText: responseStatusText,
+          error: responseData.error,
+          details: responseData.details,
+          fullResponse: responseData,
+        })
+        throw new Error(responseData.error || 'Failed to send message')
+      }
+
+      console.log('✅ Contact form submitted successfully:', {
+        message: responseData.message,
+        timestamp: new Date().toISOString(),
+      })
 
       setSubmitStatus('success')
       reset()
@@ -48,13 +103,23 @@ const ContactForm = () => {
         setSubmitStatus('idle')
       }, 5000)
     } catch (error) {
-      console.error('Error submitting form:', error)
+      const errorDetails = {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+      }
+      
+      console.error('❌ Error submitting contact form:', errorDetails)
+      console.error('🔍 Full error object:', error)
+      
       setSubmitStatus('error')
       setTimeout(() => {
         setSubmitStatus('idle')
       }, 5000)
     } finally {
       setIsSubmitting(false)
+      console.log('🏁 Contact form submission process completed')
     }
   }
 

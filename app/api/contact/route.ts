@@ -38,25 +38,34 @@ export async function POST(request: NextRequest) {
     })
     
     if (!sendGridApiKey || sendGridApiKey.length === 0) {
-      console.error('SENDGRID_API_KEY is not configured', {
+      const diagnosticInfo = {
         envVarExists: 'SENDGRID_API_KEY' in process.env,
         envVarValue: process.env.SENDGRID_API_KEY ? '[REDACTED]' : 'undefined',
         allEnvKeys: Object.keys(process.env).filter(key => key.includes('SENDGRID') || key.includes('EMAIL'))
-      })
+      }
+      console.error('SENDGRID_API_KEY is not configured', diagnosticInfo)
       return NextResponse.json(
-        { error: 'Email service is not configured. Please contact support.' },
+        { 
+          error: 'Email service is not configured. Please contact support.',
+          diagnostic: process.env.NODE_ENV === 'development' ? diagnosticInfo : undefined
+        },
         { status: 500 }
       )
     }
 
     // Validate SendGrid API key format (should start with SG.)
     if (!sendGridApiKey.startsWith('SG.')) {
-      console.error('SENDGRID_API_KEY appears to be invalid (should start with SG.)', {
+      const diagnosticInfo = {
         keyPrefix: sendGridApiKey.substring(0, 10) + '...',
-        keyLength: sendGridApiKey.length
-      })
+        keyLength: sendGridApiKey.length,
+        expectedPrefix: 'SG.'
+      }
+      console.error('SENDGRID_API_KEY appears to be invalid (should start with SG.)', diagnosticInfo)
       return NextResponse.json(
-        { error: 'Email service configuration error. Please contact support.' },
+        { 
+          error: 'Email service configuration error. Please contact support.',
+          diagnostic: process.env.NODE_ENV === 'development' ? diagnosticInfo : undefined
+        },
         { status: 500 }
       )
     }
@@ -158,18 +167,35 @@ This email was sent from the contact form on www.port24.tech
       
       // Check for specific SendGrid errors
       if (error && typeof error === 'object' && 'response' in error) {
-        const sendGridError = error as { response?: { statusCode?: number } }
+        const sendGridError = error as { 
+          response?: { 
+            statusCode?: number
+            body?: unknown
+          } 
+        }
         if (sendGridError.response?.statusCode === 401) {
           console.error('SendGrid authentication failed - check API key')
           return NextResponse.json(
-            { error: 'Email service authentication failed. Please contact support.' },
+            { 
+              error: 'Email service authentication failed. Please contact support.',
+              diagnostic: process.env.NODE_ENV === 'development' ? {
+                statusCode: 401,
+                issue: 'SendGrid API key authentication failed'
+              } : undefined
+            },
             { status: 500 }
           )
         }
         if (sendGridError.response?.statusCode === 403) {
           console.error('SendGrid authorization failed - check API key permissions')
           return NextResponse.json(
-            { error: 'Email service authorization failed. Please contact support.' },
+            { 
+              error: 'Email service authorization failed. Please contact support.',
+              diagnostic: process.env.NODE_ENV === 'development' ? {
+                statusCode: 403,
+                issue: 'SendGrid API key lacks required permissions'
+              } : undefined
+            },
             { status: 500 }
           )
         }
@@ -178,7 +204,11 @@ This email was sent from the contact form on www.port24.tech
       return NextResponse.json(
         { 
           error: 'Failed to send message. Please try again later.',
-          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+          diagnostic: process.env.NODE_ENV === 'development' ? {
+            errorType: error instanceof Error ? error.constructor.name : typeof error,
+            message: errorMessage
+          } : undefined
         },
         { status: 500 }
       )

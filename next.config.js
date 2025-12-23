@@ -23,6 +23,9 @@ const nextConfig = {
     // Enable if needed for better performance
     // serverActions: true,
   },
+  // Ensure static files are properly served
+  // This helps with chunk loading issues
+  assetPrefix: process.env.NODE_ENV === 'production' ? '' : undefined,
   async headers() {
     return [
       {
