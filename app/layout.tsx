@@ -115,6 +115,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon/P24.svg" />
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
+        <meta name="mobile-web-app-capable" content="yes" />
         {/* Google tag (gtag.js) - Direct script tags required for Google Ads verification */}
         {/* eslint-disable-next-line @next/next/next-script-for-ga */}
         <script
